@@ -5,6 +5,9 @@ A React application that analyzes images to:
 2. Generate human-like descriptions using Google's Gemini Flash 2.0
 3. Create relevant tags and hashtags for social media
 
+![image](https://github.com/user-attachments/assets/88da5a71-2b5e-40ce-b6e4-ee497db11663)
+
+
 ## Features
 
 - Complete EXIF data extraction (camera model, settings, date, etc.)
