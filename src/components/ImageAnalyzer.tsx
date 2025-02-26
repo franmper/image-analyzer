@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { FC } from "react";
 import { extractExifData } from "../services/exifService";
 import { analyzeImageWithGemini, FileTooLargeError } from "../services/geminiService";
@@ -124,12 +124,27 @@ const ImageAnalyzer: FC = () => {
   // Add a new state for tracking resize operation
   const [isResizing, setIsResizing] = useState(false);
 
+  // Add a ref for the AI analysis container
+  const aiAnalysisRef = useRef<HTMLDivElement>(null);
+
   // Reset loading states when component unmounts
   useEffect(() => {
     return () => {
       setIsExifLoading(false);
     };
   }, []);
+
+  // Add an effect to scroll to AI analysis when it's complete
+  useEffect(() => {
+    // Check if AI analysis is complete and not loading
+    if (result.aiAnalysis && !result.isLoading && aiAnalysisRef.current) {
+      // Scroll to the AI analysis container with smooth behavior
+      aiAnalysisRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [result.aiAnalysis, result.isLoading]);
 
   const handleImageUpload = useCallback(
     async (file: File) => {
@@ -528,7 +543,10 @@ const ImageAnalyzer: FC = () => {
     // If there's an AI-specific error but we have EXIF data
     if (aiError && result.exifData && Object.keys(result.exifData).length > 0) {
       return (
-        <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500">
+        <div
+          ref={aiAnalysisRef}
+          className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500"
+        >
           <h3 className="mt-0 mb-6 text-purple-500 font-semibold">AI Analysis</h3>
 
           <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-6">
@@ -581,7 +599,10 @@ const ImageAnalyzer: FC = () => {
     }
 
     return (
-      <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500">
+      <div
+        ref={aiAnalysisRef}
+        className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500"
+      >
         <h3 className="mt-0 mb-6 text-purple-500 font-semibold">AI Analysis</h3>
 
         {userContext && (
@@ -787,12 +808,12 @@ const ImageAnalyzer: FC = () => {
             Analysis Results
           </h2>
 
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-6">
-            {/* EXIF Data Column */}
-            <div className="flex-1">{renderExifData()}</div>
+          <div className="flex flex-col gap-8 md:gap-6">
+            {/* EXIF Data Section - Now positioned above AI Analysis */}
+            <div className="w-full">{renderExifData()}</div>
 
-            {/* AI Analysis Column */}
-            <div className="flex-1">
+            {/* AI Analysis Section */}
+            <div className="w-full">
               {result.isLoading ? (
                 <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500 h-full">
                   <h3 className="mt-0 mb-6 text-purple-500 font-semibold">AI Analysis</h3>

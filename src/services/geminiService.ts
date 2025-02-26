@@ -30,55 +30,62 @@ const formatExifDataForPrompt = (exifData: ExifData): string => {
     return "";
   }
 
-  const sections = [];
+  // Define sections with their properties and formatting
+  const sectionDefinitions = {
+    "File Information": [
+      { key: "fileName", format: (data: ExifData) => `File Name: ${data.fileName}` },
+      { key: "fileSize", format: (data: ExifData) => `File Size: ${data.fileSize}` },
+      { key: "fileType", format: (data: ExifData) => `File Type: ${data.fileType}` },
+      { key: "fileExtension", format: (data: ExifData) => `File Extension: ${data.fileExtension}` },
+    ],
+    "Image Information": [
+      {
+        key: ["imageWidth", "imageHeight"],
+        format: (data: ExifData) => `Dimensions: ${data.imageWidth} × ${data.imageHeight} px`,
+      },
+      { key: "aspectRatio", format: (data: ExifData) => `Aspect Ratio: ${data.aspectRatio}` },
+    ],
+    "Camera Settings": [
+      { key: ["make", "model"], format: (data: ExifData) => `Camera: ${data.make} ${data.model}` },
+      { key: "dateTime", format: (data: ExifData) => `Date Taken: ${data.dateTime}` },
+      { key: "exposureTime", format: (data: ExifData) => `Exposure: ${data.exposureTime}s` },
+      { key: "fNumber", format: (data: ExifData) => `Aperture: f/${data.fNumber}` },
+      { key: "iso", format: (data: ExifData) => `ISO: ${data.iso}` },
+      { key: "focalLength", format: (data: ExifData) => `Focal Length: ${data.focalLength}` },
+    ],
+  };
 
-  // Camera information
-  const cameraInfo = [];
-  if (exifData.make && exifData.model) {
-    cameraInfo.push(`Camera: ${exifData.make} ${exifData.model}`);
-  }
-  if (exifData.dateTime) {
-    cameraInfo.push(`Date Taken: ${exifData.dateTime}`);
-  }
-  if (exifData.exposureTime) {
-    cameraInfo.push(`Exposure: ${exifData.exposureTime}s`);
-  }
-  if (exifData.fNumber) {
-    cameraInfo.push(`Aperture: f/${exifData.fNumber}`);
-  }
-  if (exifData.iso) {
-    cameraInfo.push(`ISO: ${exifData.iso}`);
-  }
-  if (exifData.focalLength) {
-    cameraInfo.push(`Focal Length: ${exifData.focalLength}`);
-  }
+  // Process each section
+  const sections = Object.entries(sectionDefinitions)
+    .map(([sectionName, properties]) => {
+      // Get all valid properties for this section
+      const sectionLines = properties
+        .filter((prop) => {
+          // Check if all required keys exist in the exifData
+          if (Array.isArray(prop.key)) {
+            return prop.key.every((k) => exifData[k as keyof ExifData]);
+          }
+          return exifData[prop.key as keyof ExifData];
+        })
+        .map((prop) => prop.format(exifData));
 
-  if (cameraInfo.length > 0) {
-    sections.push(`Camera Settings:\n${cameraInfo.join("\n")}`);
-  }
+      // Only return sections that have content
+      return sectionLines.length > 0 ? `${sectionName}:\n${sectionLines.join("\n")}` : null;
+    })
+    .filter(Boolean); // Remove empty sections
 
-  // Image information
-  const imageInfo = [];
-  if (exifData.imageWidth && exifData.imageHeight) {
-    imageInfo.push(`Dimensions: ${exifData.imageWidth} × ${exifData.imageHeight} px`);
-  }
-  if (exifData.aspectRatio) {
-    imageInfo.push(`Aspect Ratio: ${exifData.aspectRatio}`);
-  }
-  if (exifData.fileType) {
-    imageInfo.push(`File Type: ${exifData.fileType}`);
-  }
-
-  if (imageInfo.length > 0) {
-    sections.push(`Image Information:\n${imageInfo.join("\n")}`);
-  }
-
-  // Location information
+  // Add location information if available
   if (exifData.gpsLatitude && exifData.gpsLongitude) {
-    sections.push(`Location: Coordinates ${exifData.gpsLatitude}, ${exifData.gpsLongitude}`);
+    const locationSection = [
+      `Location Information:\nCoordinates: ${exifData.gpsLatitude}, ${exifData.gpsLongitude}`,
+    ];
     if (exifData.locationName) {
-      sections.push(`Location Name: ${exifData.locationName}`);
+      locationSection.push(`Location Name: ${exifData.locationName}`);
     }
+    if (exifData.gpsAltitude) {
+      locationSection.push(`Altitude: ${exifData.gpsAltitude}`);
+    }
+    sections.push(locationSection.join("\n"));
   }
 
   return sections.join("\n\n");
@@ -114,49 +121,45 @@ export const analyzeImageWithGemini = async (
       ? `\nUser provided context: "${userContext}"\nUse this context to inform your analysis.`
       : "";
 
-    // Add EXIF data to the prompt if available
-    const exifSection =
-      exifData && Object.keys(exifData).length > 0
-        ? `\nEXIF Data:\n${formatExifDataForPrompt(
-            exifData
-          )}\nUse this technical information to inform your analysis.`
-        : "";
-
     // Create a prompt for the model
     const prompt = `
-      You are a professional photographer and social media expert.
-      Analyze this image and provide:${contextSection}${exifSection}
-      1. A detailed, empathetic, and human-like description (3-4 sentences)
-      2. 5-7 relevant tags for social media
-      3. 5-7 hashtags for social media (including the # symbol)
-      4. 3-5 enhancement suggestions for the image, each with:
-         - A short title (2-4 words)
-         - A brief description explaining how to improve the image (1-2 sentences)
-         - A priority level (high, medium, or low) based on how much the enhancement would improve the image
-      
-      For enhancement suggestions, consider aspects like:
-      - Composition (rule of thirds, framing, leading lines)
-      - Lighting (exposure, shadows, highlights)
-      - Color balance and saturation
-      - Focus and sharpness
-      - Cropping opportunities
-      - Potential filters or effects
-      
-      ${
-        exifData
-          ? "Use the EXIF data to provide technically accurate suggestions. For example, if the image has a high ISO, suggest noise reduction; if it has a shallow depth of field (low f-number), comment on the bokeh quality."
-          : ""
+      You are a professional photographer and social media strategist with a deeply human, empathetic, and warm personality—like a supportive friend who's passionate about helping others shine. 
+      A user has shared an image for analysis, along with this context: ${
+        contextSection ||
+        "No extra context given—I'll imagine this is a heartfelt moment you want to share with the world on social media."
       }
-      
-      Format your response as JSON with the following structure:
+      When available, use this EXIF data to inform your analysis: ${
+        exifData
+          ? formatExifDataForPrompt(exifData)
+          : "No EXIF data here—don't worry, I'll focus on the beauty I see in the image itself!"
+      }
+      Here's what I'd love to offer you:
+      1. A 3-4 sentence description that feels alive—capturing the heart of your image with warmth, empathy, and a story that pulls people in on social media.
+      2. 5-7 tags that reflect your image's soul and fit the vibe of platforms like Instagram or TikTok—simple, relatable, and trendy.
+      3. 5-7 hashtags (with #) to help your image find its audience—blending popular ones with special ones just for your moment.
+      4. 3-5 enhancement suggestions to make your image glow even brighter, each with:
+        - A short title (2-4 words)
+        - A 1-2 sentence nudge explaining how it lifts your image's spirit and connection with viewers
+        - A priority level (high, medium, low) based on how much love it could add
+
+      For those enhancements, I'll think about:
+      - Composition (e.g., framing that feels just right)
+      - Lighting (e.g., soft glow or bold contrast)
+      - Color (e.g., hues that sing or soothe)
+      - Sharpness (e.g., crisp details that pop)
+      - Cropping or effects to make it uniquely yours
+
+      If there's EXIF data, I'll use it to get technical in a friendly way—like suggesting a little noise reduction if the ISO's high, or cheering the dreamy blur from a low f-number. No EXIF? No problem—I'll lean into what I see and feel, keeping it all about boosting your social media magic.
+
+      Format your response as JSON so it's easy to read:
       {
-        "description": "your detailed description here",
+        "description": "A warm, heartfelt description here",
         "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
         "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5"],
         "enhancementSuggestions": [
           {
-            "title": "Suggestion title",
-            "description": "Detailed explanation of the suggestion",
+            "title": "A gentle idea",
+            "description": "Why this makes your image sing",
             "priority": "high/medium/low"
           }
         ]
@@ -178,10 +181,10 @@ export const analyzeImageWithGemini = async (
       const parsedResponse = JSON.parse(jsonText);
 
       return {
-        description: parsedResponse.description || "No description available",
-        tags: parsedResponse.tags || [],
-        hashtags: parsedResponse.hashtags || [],
-        enhancementSuggestions: parsedResponse.enhancementSuggestions || [],
+        description: parsedResponse.description ?? "No description available",
+        tags: parsedResponse.tags ?? [],
+        hashtags: parsedResponse.hashtags ?? [],
+        enhancementSuggestions: parsedResponse.enhancementSuggestions ?? [],
       };
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
