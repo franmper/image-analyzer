@@ -47,7 +47,7 @@ export interface ImageAnalysis {
 export interface AnalysisResult {
   exifData: ExifData;
   aiAnalysis: ImageAnalysis | null;
-  imageUrl: string;
+  imageUrl: string | null;
   isLoading: boolean;
   error: string | null;
 }
