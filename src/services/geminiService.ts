@@ -5,6 +5,21 @@ import type { ImageAnalysis, ExifData } from "../types";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
+// Maximum file size for Gemini API (20MB in bytes)
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+
+// Custom error class for file size errors
+export class FileTooLargeError extends Error {
+  constructor(fileSize: number) {
+    super(
+      `Image file size (${(fileSize / (1024 * 1024)).toFixed(
+        2
+      )} MB) exceeds the 20MB limit for AI analysis.`
+    );
+    this.name = "FileTooLargeError";
+  }
+}
+
 /**
  * Formats EXIF data into a readable string for the AI prompt
  * @param exifData The EXIF data extracted from the image
@@ -75,6 +90,7 @@ const formatExifDataForPrompt = (exifData: ExifData): string => {
  * @param userContext Optional context provided by the user to improve analysis
  * @param exifData Optional EXIF data extracted from the image
  * @returns Promise with the analysis results
+ * @throws FileTooLargeError if the file is too large for the Gemini API
  */
 export const analyzeImageWithGemini = async (
   imageFile: File,
@@ -82,6 +98,11 @@ export const analyzeImageWithGemini = async (
   exifData?: ExifData
 ): Promise<ImageAnalysis> => {
   try {
+    // Check file size before processing
+    if (imageFile.size > MAX_FILE_SIZE) {
+      throw new FileTooLargeError(imageFile.size);
+    }
+
     // Convert the image to base64
     const base64Image = await fileToGenerativePart(imageFile);
 

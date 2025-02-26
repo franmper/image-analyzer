@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
 import { extractExifData } from "../services/exifService";
-import { analyzeImageWithGemini } from "../services/geminiService";
+import { analyzeImageWithGemini, FileTooLargeError } from "../services/geminiService";
 import type { AnalysisResult, ImageAnalysis } from "../types";
 
 // Add a function to handle viewport meta tag
@@ -23,6 +23,85 @@ const setViewportMeta = () => {
   }
 };
 
+/**
+ * Resizes an image to fit within the maximum file size limit
+ * @param file The original image file
+ * @param maxSizeMB Maximum size in MB
+ * @returns Promise with the resized image file
+ */
+const resizeImage = (file: File, maxSizeMB = 19): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = () => {
+        // Start with original dimensions
+        let width = img.width;
+        let height = img.height;
+        const quality = 0.9;
+
+        // If image is very large, reduce dimensions first
+        const MAX_DIMENSION = 3000;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          const ratio = width / height;
+          if (width > height) {
+            width = MAX_DIMENSION;
+            height = Math.round(width / ratio);
+          } else {
+            height = MAX_DIMENSION;
+            width = Math.round(height * ratio);
+          }
+        }
+
+        // Create canvas and draw image
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to blob with quality setting
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Could not create image blob"));
+              return;
+            }
+
+            // Create new file from blob
+            const newFile = new File([blob], file.name, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+
+            resolve(newFile);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => {
+        reject(new Error("Error loading image"));
+      };
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Error reading file"));
+    };
+  });
+};
+
 const ImageAnalyzer: FC = () => {
   // Call the function to set viewport meta tag
   setViewportMeta();
@@ -40,6 +119,10 @@ const ImageAnalyzer: FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [isExifLoading, setIsExifLoading] = useState(false);
   const [userContext, setUserContext] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Add a new state for tracking resize operation
+  const [isResizing, setIsResizing] = useState(false);
 
   // Reset loading states when component unmounts
   useEffect(() => {
@@ -60,6 +143,7 @@ const ImageAnalyzer: FC = () => {
 
       // First, set the loading states and clear previous data
       setIsExifLoading(true);
+      setAiError(null); // Clear previous AI errors
       setResult((prev) => ({
         ...prev,
         isLoading: true,
@@ -89,17 +173,31 @@ const ImageAnalyzer: FC = () => {
           try {
             // Pass the user context and EXIF data to the AI analysis
             aiAnalysis = await analyzeImageWithGemini(file, userContext, exifData);
+
+            // Finally update the result with AI analysis and set loading to false
+            setResult((prev) => ({
+              ...prev,
+              aiAnalysis,
+              isLoading: false,
+            }));
           } catch (aiError) {
             console.error("Error analyzing image with Gemini:", aiError);
-            // Continue with EXIF data even if AI analysis fails
-          }
 
-          // Finally update the result with AI analysis and set loading to false
-          setResult((prev) => ({
-            ...prev,
-            aiAnalysis,
-            isLoading: false,
-          }));
+            // Set loading to false
+            setResult((prev) => ({
+              ...prev,
+              isLoading: false,
+            }));
+
+            // Handle specific error for file size
+            if (aiError instanceof FileTooLargeError) {
+              setAiError(aiError.message);
+            } else {
+              setAiError(
+                "Failed to analyze image with AI. Please try again or try a different image."
+              );
+            }
+          }
         } catch (error) {
           console.error("Error processing image:", error);
           setIsExifLoading(false);
@@ -149,6 +247,34 @@ const ImageAnalyzer: FC = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
+  };
+
+  // Add a function to handle image resizing
+  const handleResizeImage = async () => {
+    if (!result.imageUrl) return;
+
+    try {
+      setIsResizing(true);
+
+      // Get the original file from the URL
+      const response = await fetch(result.imageUrl);
+      const blob = await response.blob();
+      const originalFile = new File([blob], "resized-image.jpg", { type: blob.type });
+
+      // Resize the image
+      const resizedFile = await resizeImage(originalFile);
+
+      // Upload the resized image
+      handleImageUpload(resizedFile);
+    } catch (error) {
+      console.error("Error resizing image:", error);
+      setResult((prev) => ({
+        ...prev,
+        error: "Failed to resize image. Please try a different image or resize it manually.",
+      }));
+    } finally {
+      setIsResizing(false);
+    }
   };
 
   const renderExifData = () => {
@@ -398,6 +524,58 @@ const ImageAnalyzer: FC = () => {
 
   const renderAiAnalysis = () => {
     const { aiAnalysis } = result;
+
+    // If there's an AI-specific error but we have EXIF data
+    if (aiError && result.exifData && Object.keys(result.exifData).length > 0) {
+      return (
+        <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500">
+          <h3 className="mt-0 mb-6 text-purple-500 font-semibold">AI Analysis</h3>
+
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-6">
+            <div className="flex items-start">
+              <div className="text-amber-500 text-xl mr-3">⚠️</div>
+              <div className="flex-1">
+                <h4 className="text-amber-800 font-medium mb-1">AI Analysis Unavailable</h4>
+                <p className="text-amber-700 text-sm">{aiError}</p>
+
+                {aiError.includes("file size") && (
+                  <div className="mt-3">
+                    <p className="text-sm text-amber-700 mb-2">Suggestions:</p>
+                    <ul className="list-disc list-inside text-sm text-amber-700 space-y-1 mb-3">
+                      <li>Resize the image to reduce its file size</li>
+                      <li>Compress the image before uploading</li>
+                      <li>Try a different image under 20MB</li>
+                    </ul>
+
+                    <button
+                      type="button"
+                      onClick={handleResizeImage}
+                      disabled={isResizing}
+                      className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center"
+                    >
+                      {isResizing ? (
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Resizing...
+                        </>
+                      ) : (
+                        <>Resize This Image Automatically</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-gray-600 text-sm italic">
+            EXIF data extraction was successful. You can still view the technical details of your
+            image above.
+          </p>
+        </div>
+      );
+    }
+
     if (!aiAnalysis) {
       return null;
     }
