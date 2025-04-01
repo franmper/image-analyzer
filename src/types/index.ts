@@ -37,11 +37,17 @@ export interface EnhancementSuggestion {
   priority: "high" | "medium" | "low";
 }
 
+export interface SocialMediaSuggestion {
+  title: string;
+  description: string;
+}
+
 export interface ImageAnalysis {
   description: string;
   tags: string[];
   hashtags: string[];
   enhancementSuggestions: EnhancementSuggestion[];
+  socialSuggestions?: SocialMediaSuggestion[];
 }
 
 export interface AnalysisResult {

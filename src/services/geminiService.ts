@@ -141,6 +141,10 @@ export const analyzeImageWithGemini = async (
         - A short title (2-4 words)
         - A 1-2 sentence nudge explaining how it lifts your image's spirit and connection with viewers
         - A priority level (high, medium, low) based on how much love it could add
+      5. 3 social media post title and description options that would perfectly complement this image:
+        - Each with a catchy, engaging title (keep it under 15 words)
+        - And a compelling description (2-3 sentences) that would drive engagement if posted with this image
+        - Make each option distinctly different in tone and approach (one emotional, one informative, one playful/creative)
 
       For those enhancements, I'll think about:
       - Composition (e.g., framing that feels just right)
@@ -161,6 +165,20 @@ export const analyzeImageWithGemini = async (
             "title": "A gentle idea",
             "description": "Why this makes your image sing",
             "priority": "high/medium/low"
+          }
+        ],
+        "socialSuggestions": [
+          {
+            "title": "Emotional post title here",
+            "description": "An engaging description that connects emotionally with viewers."
+          },
+          {
+            "title": "Informative post title here",
+            "description": "Description that shares interesting context or facts about the image."
+          },
+          {
+            "title": "Creative/playful post title here",
+            "description": "Fun and engaging description that shows personality and creativity."
           }
         ]
       }
@@ -185,6 +203,7 @@ export const analyzeImageWithGemini = async (
         tags: parsedResponse.tags ?? [],
         hashtags: parsedResponse.hashtags ?? [],
         enhancementSuggestions: parsedResponse.enhancementSuggestions ?? [],
+        socialSuggestions: parsedResponse.socialSuggestions ?? [],
       };
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
@@ -194,6 +213,7 @@ export const analyzeImageWithGemini = async (
         tags: [],
         hashtags: [],
         enhancementSuggestions: [],
+        socialSuggestions: [],
       };
     }
   } catch (error) {
