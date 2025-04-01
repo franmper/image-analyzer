@@ -295,86 +295,244 @@ const ImageAnalyzer: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-8 font-sans text-gray-700 bg-white rounded-2xl shadow-lg relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:via-purple-600 before:to-emerald-500 before:z-10 md:p-4 md:rounded-xl sm:p-3 sm:rounded-lg">
-      <div className="text-center text-xl text-gray-500 mb-8 md:text-lg md:mb-6 sm:text-base sm:mb-4">
-        Upload an image to extract EXIF data and get AI-powered analysis
-      </div>
+    <div className="w-screen min-h-screen bg-white">
+      <header className="w-screen bg-white border-b border-gray-200 py-3 px-6 flex justify-between items-center">
+        <div className="flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-blue-500 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-labelledby="imageIconTitle"
+          >
+            <title id="imageIconTitle">Image Icon</title>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <h1 className="text-lg font-medium text-gray-800">Image Insights</h1>
+        </div>
+        <a
+          href="mailto:fran.mper@gmail.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-600 hover:text-gray-900 transition-colors text-sm flex items-center"
+        >
+          Contact
+        </a>
+      </header>
 
-      <div className="flex flex-col md:flex-row gap-8 md:gap-6 sm:gap-4">
-        {/* Left column: Upload and Context */}
-        <div className="flex-1 flex flex-col">
-          <div className="flex-grow mb-8 transition-all duration-300 hover:-translate-y-0.5 md:mb-6">
-            <div
-              className={`border-2 ${
-                isDragging ? "border-blue-500 bg-blue-50" : "border-slate-300 bg-white"
-              } border-dashed rounded-xl p-8 text-center transition-all duration-300 hover:border-blue-500 hover:bg-blue-50 shadow-sm md:p-6 md:rounded-lg sm:p-5 sm:rounded-md h-full flex flex-col justify-center items-center`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <p className="mb-3 md:text-sm sm:text-xs sm:mb-2">
-                Drag and drop an image here, or click to select
+      <div className="flex flex-col md:flex-row w-full h-[calc(100vh-57px)]">
+        {/* Left sidebar for upload - Only show when no image is uploaded */}
+        {!result.imageUrl ? (
+          <div className="w-full bg-gray-50 p-6 border-r border-gray-200">
+            <div className="mb-6">
+              <h2 className="text-base font-medium text-gray-800 mb-1">Upload Image</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Select an image or drop it below to analyze
               </p>
-              <label className="inline-block bg-blue-500 text-white py-3 px-6 rounded-lg cursor-pointer mt-4 transition-all duration-300 font-semibold shadow-md hover:bg-blue-600 hover:-translate-y-0.5 md:py-2.5 md:px-5 md:text-sm sm:w-4/5 sm:text-center">
-                Select Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
+
+              <div
+                className={`border-2 ${
+                  isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+                } border-dashed rounded-lg p-8 text-center transition-all duration-300 hover:border-blue-500 hover:bg-blue-50 mb-4`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-10 w-10 text-blue-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-labelledby="uploadIconTitle"
+                  >
+                    <title id="uploadIconTitle">Upload Image</title>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M7 16a3 3 0 01-3-3V6a3 3 0 013-3h10a3 3 0 013 3v7a3 3 0 01-3 3H7zm8-9a1 1 0 00-1-1h-4a1 1 0 00-1 1v4l2-1.5L13 11V7z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M5 21h14a2 2 0 002-2V7.8a5 5 0 00-2.582-4.389A4.81 4.81 0 0016 3H8a4.81 4.81 0 00-2.418.411A5 5 0 003 7.8V19a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p className="text-sm text-gray-600">Drag and drop an image here</p>
+                  <span className="text-xs text-gray-500">or</span>
+                  <label className="inline-block bg-blue-500 text-white py-2 px-4 rounded-lg cursor-pointer text-sm font-medium hover:bg-blue-600 transition-colors">
+                    Browse Files
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      ref={fileInputRef}
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Context input for AI analysis */}
+            <div>
+              <h2 className="text-base font-medium text-gray-800 mb-1">Image Context</h2>
+              <p className="text-sm text-gray-500 mb-2">
+                Add optional context to improve AI analysis
+              </p>
+              <textarea
+                id="context"
+                value={userContext}
+                onChange={(e) => setUserContext(e.target.value)}
+                placeholder="Example: 'This was taken during my vacation in Italy' or 'This is a product photo for my website'"
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                rows={4}
+              />
             </div>
           </div>
+        ) : null}
 
-          {/* Context input for AI analysis */}
-          <div className="mb-8 md:mb-6 sm:mb-4">
-            <label htmlFor="context" className="block mb-2 text-gray-700 font-medium md:text-sm">
-              Add Context (Optional)
-            </label>
-            <textarea
-              id="context"
-              value={userContext}
-              onChange={(e) => setUserContext(e.target.value)}
-              placeholder="Add any context about the image to improve AI analysis (e.g., 'This is a photo from my vacation in Italy', 'This is a product photo for my website')"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all md:text-sm md:p-2.5 sm:p-2 sm:text-xs"
-              rows={3}
-            />
-          </div>
+        {/* Main content area */}
+        <div
+          className={`flex-1 flex flex-col overflow-auto bg-white ${
+            result.imageUrl ? "w-full" : ""
+          }`}
+        >
+          {result.imageUrl ? (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-gray-800">Image Analysis</h2>
+                <button
+                  onClick={() => {
+                    // Clear image and analysis
+                    setResult({
+                      imageUrl: null,
+                      exifData: {},
+                      aiAnalysis: null,
+                      isLoading: false,
+                      error: null,
+                    });
+                    setAiError(null);
+                    setIsExifLoading(false);
+                  }}
+                  className="text-blue-500 hover:text-blue-600 text-sm flex items-center"
+                  type="button"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-labelledby="backButtonTitle"
+                  >
+                    <title id="backButtonTitle">Back arrow</title>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Back to Upload
+                </button>
+              </div>
+
+              <div className="bg-gray-100 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={handleImageClick}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      handleImageClick();
+                    }
+                  }}
+                  className="bg-transparent border-0 p-0 cursor-pointer flex items-center justify-center w-full"
+                  aria-label="View full size image"
+                >
+                  <img
+                    src={result.imageUrl}
+                    alt="Uploaded"
+                    className="max-w-full max-h-[50vh] object-contain"
+                  />
+                </button>
+              </div>
+
+              {userContext && (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4 text-blue-700 text-sm">
+                  <span className="text-blue-500 font-medium">Context:</span>
+                  <span className="text-blue-800">{userContext}</span>
+                </div>
+              )}
+
+              {/* Error display */}
+              {result.error && (
+                <div className="bg-red-50 text-red-600 p-4 mt-4 rounded-lg border-l-4 border-red-500 text-sm">
+                  {result.error}
+                </div>
+              )}
+
+              {/* Results section - only show if we have EXIF data or analysis is loading/complete */}
+              {((result.exifData && Object.keys(result.exifData).length > 0) ||
+                isExifLoading ||
+                result.isLoading ||
+                result.aiAnalysis ||
+                aiError) && (
+                <div className="mt-6">
+                  <div className="flex flex-col gap-6">
+                    {/* EXIF Data Section */}
+                    <div className="w-full">
+                      <ExifDataDisplay
+                        exifData={result.exifData}
+                        isLoading={isExifLoading}
+                        showAllExif={showAllExif}
+                        setShowAllExif={setShowAllExif}
+                      />
+                    </div>
+
+                    {/* AI Analysis Section */}
+                    <div className="w-full">
+                      {result.isLoading ? (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                          <h3 className="mt-0 mb-4 text-purple-500 font-semibold">AI Analysis</h3>
+                          <div className="text-center p-6 text-purple-700 bg-purple-50 rounded-lg border border-dashed border-purple-200 animate-pulse">
+                            <div className="inline-block w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2" />
+                            Analyzing image with AI...
+                          </div>
+                        </div>
+                      ) : (
+                        <AIAnalysisDisplay
+                          aiAnalysis={result.aiAnalysis}
+                          aiError={aiError}
+                          exifData={result.exifData}
+                          isLoading={result.isLoading}
+                          userContext={userContext}
+                          isResizing={isResizing}
+                          handleResizeImage={handleResizeImage}
+                          aiAnalysisRef={aiAnalysisRef as React.RefObject<HTMLDivElement>}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
-
-        {/* Right column: Image Preview (when available) */}
-        {result.imageUrl && (
-          <div className="flex-1 flex items-center justify-center">
-            <button
-              type="button"
-              onClick={handleImageClick}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  handleImageClick();
-                }
-              }}
-              className="bg-transparent border-0 p-0 cursor-pointer flex items-center justify-center w-full"
-            >
-              <img
-                src={result.imageUrl}
-                alt="Uploaded"
-                className="max-w-full max-h-[40vh] object-contain rounded-lg transition-transform duration-200 hover:scale-[1.02] shadow-md"
-              />
-            </button>
-          </div>
-        )}
       </div>
-
-      {result.error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4 border-l-4 border-red-500 md:p-3 md:text-sm">
-          {result.error}
-        </div>
-      )}
 
       {showModal && result.imageUrl && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] overflow-auto">
+          <div className="relative max-w-5xl max-h-[90vh] overflow-auto">
             <button
               onClick={handleCloseModal}
               onKeyDown={(e) => {
@@ -383,64 +541,19 @@ const ImageAnalyzer: React.FC = () => {
                 }
               }}
               type="button"
-              className="absolute top-2 right-2 bg-white rounded-full w-8 h-8 flex items-center justify-center text-gray-800 hover:bg-gray-200 transition-colors z-10"
+              className="absolute top-3 right-3 bg-white rounded-full w-8 h-8 flex items-center justify-center text-gray-800 hover:bg-gray-200 transition-colors z-10"
+              aria-label="Close modal"
             >
               ✕
             </button>
             <img
               src={result.imageUrl}
               alt="Full size"
-              className="max-w-full max-h-[90vh] object-contain"
+              className="max-w-full max-h-[90vh] object-contain bg-gray-900 p-4"
             />
           </div>
         </div>
       )}
-
-      {(result.exifData && Object.keys(result.exifData).length > 0) ||
-      isExifLoading ||
-      result.aiAnalysis ? (
-        <div className="mt-8 md:mt-6 sm:mt-4">
-          <h2 className="text-2xl font-bold text-gray-700 mb-6 md:text-xl md:mb-4 sm:text-lg sm:mb-3">
-            Analysis Results
-          </h2>
-
-          <div className="flex flex-col gap-8 md:gap-6">
-            {/* EXIF Data Section - Now positioned above AI Analysis */}
-            <div className="w-full">
-              <ExifDataDisplay
-                exifData={result.exifData}
-                isLoading={isExifLoading}
-                showAllExif={showAllExif}
-                setShowAllExif={setShowAllExif}
-              />
-            </div>
-
-            {/* AI Analysis Section */}
-            <div className="w-full">
-              {result.isLoading ? (
-                <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-purple-500 h-full">
-                  <h3 className="mt-0 mb-6 text-purple-500 font-semibold">AI Analysis</h3>
-                  <div className="text-center p-8 text-purple-700 bg-purple-50 rounded-lg border border-dashed border-purple-200 animate-pulse">
-                    <div className="inline-block w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2" />
-                    Analyzing image with AI...
-                  </div>
-                </div>
-              ) : (
-                <AIAnalysisDisplay
-                  aiAnalysis={result.aiAnalysis}
-                  aiError={aiError}
-                  exifData={result.exifData}
-                  isLoading={result.isLoading}
-                  userContext={userContext}
-                  isResizing={isResizing}
-                  handleResizeImage={handleResizeImage}
-                  aiAnalysisRef={aiAnalysisRef as React.RefObject<HTMLDivElement>}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 };

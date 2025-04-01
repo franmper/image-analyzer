@@ -5,39 +5,49 @@ interface ExifDataDisplayProps {
   exifData: ExifData;
   isLoading: boolean;
   showAllExif: boolean;
-  setShowAllExif: (show: boolean) => void;
+  setShowAllExif: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /**
- * Helper function to safely render EXIF values of different types
+ * A component that displays EXIF data extracted from an image
  */
-const safeRender = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return "N/A";
-  }
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch (e) {
-      return String(value);
-    }
-  }
-  return String(value);
-};
-
 const ExifDataDisplay: React.FC<ExifDataDisplayProps> = ({
   exifData,
   isLoading,
   showAllExif,
   setShowAllExif,
 }) => {
+  // Safely render values of different types
+  const safeRender = (value: unknown): string => {
+    if (value === undefined || value === null) {
+      return "Unknown";
+    }
+
+    if (typeof value === "boolean") {
+      return value ? "Yes" : "No";
+    }
+
+    if (typeof value === "number") {
+      return value.toString();
+    }
+
+    if (typeof value === "object") {
+      if (Array.isArray(value)) {
+        return value.join(", ");
+      }
+      return JSON.stringify(value);
+    }
+
+    return String(value);
+  };
+
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-emerald-500">
-        <h3 className="mt-0 mb-6 text-emerald-500 font-semibold">EXIF Data</h3>
-        <div className="text-center p-8 text-purple-700 bg-purple-50 rounded-lg border border-dashed border-purple-200 animate-pulse">
-          <div className="inline-block w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-2" />
-          Extracting EXIF data...
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <h3 className="mt-0 mb-4 text-blue-500 font-semibold">EXIF Data</h3>
+        <div className="text-center p-6 text-blue-700 bg-blue-50 rounded-lg border border-dashed border-blue-200 animate-pulse">
+          <div className="inline-block w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2" />
+          Extracting image metadata...
         </div>
       </div>
     );
@@ -45,204 +55,242 @@ const ExifDataDisplay: React.FC<ExifDataDisplayProps> = ({
 
   if (!exifData || Object.keys(exifData).length === 0) {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-emerald-500">
-        <h3 className="mt-0 mb-6 text-emerald-500 font-semibold">EXIF Data</h3>
-        <p>No EXIF data found</p>
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <h3 className="mt-0 mb-4 text-blue-500 font-semibold">EXIF Data</h3>
+        <div className="text-center p-6 text-gray-600 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+          No EXIF data found in this image
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="bg-white rounded-xl p-6 shadow-md border-t-4 border-t-emerald-500">
-      <h3 className="mt-0 mb-6 text-emerald-500 font-semibold">EXIF Data</h3>
+  const hasFileInfo = exifData.fileName || exifData.fileSize || exifData.fileType;
+  const hasDimensions = exifData.imageWidth || exifData.imageHeight;
+  const hasCamera = exifData.make || exifData.model;
+  const hasLocation = exifData.gpsLatitude || exifData.gpsLongitude || exifData.locationName;
 
-      {/* File Information Section */}
-      {(exifData.fileName || exifData.fileSize || exifData.imageWidth || exifData.imageHeight) && (
-        <div className="mb-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-2">
+  // Get all remaining exif properties not displayed in the main sections
+  const displayedProperties = [
+    "make",
+    "model",
+    "dateTime",
+    "rawDateTime",
+    "exposureTime",
+    "fNumber",
+    "iso",
+    "focalLength",
+    "fileName",
+    "fileSize",
+    "fileSizeBytes",
+    "fileType",
+    "fileExtension",
+    "imageWidth",
+    "imageHeight",
+    "aspectRatio",
+    "gpsLatitude",
+    "gpsLongitude",
+    "gpsAltitude",
+    "locationName",
+  ];
+
+  const otherProperties = Object.keys(exifData).filter((key) => !displayedProperties.includes(key));
+
+  return (
+    <div className="bg-white rounded-lg p-4 border border-gray-200">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="mt-0 text-blue-500 font-semibold">EXIF Data</h3>
+        <button
+          type="button"
+          onClick={() => setShowAllExif(!showAllExif)}
+          className="text-xs text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          {showAllExif ? "Show Less" : "Show All Properties"}
+        </button>
+      </div>
+
+      {/* File Info Section */}
+      {hasFileInfo && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2 border-b border-gray-200 pb-1">
             File Information
           </h4>
-          <div className="flex flex-wrap gap-6 mb-4 md:gap-4 sm:gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
             {exifData.fileName && (
-              <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-                <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">File Name</div>
-                <div className="text-gray-600 md:text-sm">{safeRender(exifData.fileName)}</div>
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">File Name</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.fileName)}</div>
               </div>
             )}
-
-            {exifData.fileExtension && (
-              <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-                <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Format</div>
-                <div className="text-gray-600 md:text-sm">
-                  {safeRender(exifData.fileExtension).toUpperCase()}
+            {exifData.fileType && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Format</div>
+                <div className="font-medium text-gray-800">
+                  {safeRender(exifData.fileExtension)} ({safeRender(exifData.fileType)})
                 </div>
               </div>
             )}
-
             {exifData.fileSize && (
-              <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-                <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">File Size</div>
-                <div className="text-gray-600 md:text-sm">{safeRender(exifData.fileSize)}</div>
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">File Size</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.fileSize)}</div>
               </div>
             )}
           </div>
-
-          {(exifData.imageWidth || exifData.imageHeight) && (
-            <div className="flex flex-wrap gap-6 md:gap-4 sm:gap-3">
-              {exifData.imageWidth && exifData.imageHeight && (
-                <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-                  <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">
-                    Dimensions
-                  </div>
-                  <div className="text-gray-600 md:text-sm">
-                    {safeRender(exifData.imageWidth)} × {safeRender(exifData.imageHeight)} px
-                  </div>
-                </div>
-              )}
-
-              {exifData.aspectRatio && (
-                <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-                  <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">
-                    Aspect Ratio
-                  </div>
-                  <div className="text-gray-600 md:text-sm">{safeRender(exifData.aspectRatio)}</div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Camera Information Section - Add a heading for existing camera info */}
-      <h4 className="text-sm font-semibold text-gray-700 mb-3 border-b border-gray-200 pb-2">
-        Camera Information
-      </h4>
-      <div className="flex flex-wrap gap-6 mb-6 md:gap-4 sm:gap-3">
-        {exifData.make && exifData.model && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Camera</div>
-            <div className="text-gray-600 md:text-sm">
-              {safeRender(exifData.make)} {safeRender(exifData.model)}
-            </div>
+      {/* Image Dimensions Section */}
+      {hasDimensions && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2 border-b border-gray-200 pb-1">
+            Image Dimensions
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {exifData.imageWidth && exifData.imageHeight && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Dimensions</div>
+                <div className="font-medium text-gray-800">
+                  {safeRender(exifData.imageWidth)} × {safeRender(exifData.imageHeight)} px
+                </div>
+              </div>
+            )}
+            {exifData.aspectRatio && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Aspect Ratio</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.aspectRatio)}</div>
+              </div>
+            )}
           </div>
-        )}
-
-        {exifData.dateTime && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Date</div>
-            <div
-              className="text-gray-600 md:text-sm"
-              title={
-                exifData.rawDateTime
-                  ? `Original format: ${safeRender(exifData.rawDateTime)}`
-                  : undefined
-              }
-            >
-              {safeRender(exifData.dateTime)}
-            </div>
-          </div>
-        )}
-
-        {exifData.exposureTime && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Exposure</div>
-            <div className="text-gray-600 md:text-sm">{safeRender(exifData.exposureTime)}s</div>
-          </div>
-        )}
-
-        {exifData.fNumber && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Aperture</div>
-            <div className="text-gray-600 md:text-sm">f/{safeRender(exifData.fNumber)}</div>
-          </div>
-        )}
-
-        {exifData.iso && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">ISO</div>
-            <div className="text-gray-600 md:text-sm">{safeRender(exifData.iso)}</div>
-          </div>
-        )}
-
-        {exifData.focalLength && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Focal Length</div>
-            <div className="text-gray-600 md:text-sm">{safeRender(exifData.focalLength)}mm</div>
-          </div>
-        )}
-
-        {exifData.gpsLatitude && exifData.gpsLongitude && (
-          <div className="flex-1 min-w-[150px] bg-slate-50 rounded-lg p-3 shadow-sm md:min-w-[120px] md:p-2.5 sm:min-w-[100px] sm:p-2">
-            <div className="text-sm font-semibold text-teal-700 mb-1 md:text-xs">Location</div>
-            <div className="text-gray-600 md:text-sm">
-              <a
-                href={`https://www.google.com/maps?q=${
-                  typeof exifData.gpsLatitude === "number" ? exifData.gpsLatitude : 0
-                },${typeof exifData.gpsLongitude === "number" ? exifData.gpsLongitude : 0}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-2 text-blue-500 font-semibold hover:text-blue-700 hover:underline transition-colors sm:text-sm sm:mt-1.5"
-              >
-                View on Map
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Toggle button for showing all EXIF data */}
-      <div className="mt-4 border-t border-slate-200 pt-4">
-        <button
-          onClick={() => setShowAllExif(!showAllExif)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              setShowAllExif(!showAllExif);
-            }
-          }}
-          type="button"
-          className="w-full bg-gradient-to-r from-emerald-500 to-blue-500 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center transition-all hover:shadow-md hover:-translate-y-0.5 md:text-sm md:py-1.5 md:px-3"
-        >
-          {showAllExif ? "Hide" : "Show"} All EXIF Data
-          <span
-            className={`ml-2 transition-transform duration-300 ${
-              showAllExif ? "rotate-180" : "rotate-0"
-            }`}
-          >
-            ▼
-          </span>
-        </button>
-
-        <div
-          className={`overflow-hidden transition-all duration-500 ${
-            showAllExif ? "max-h-[2000px] opacity-100 mt-4" : "max-h-0 opacity-0 mt-0"
-          }`}
-        >
-          <table className="w-full border-collapse rounded-lg overflow-hidden shadow-sm">
-            <thead>
-              <tr>
-                <th className="bg-slate-100 text-teal-700 font-semibold p-2 text-left md:text-sm md:p-1.5 sm:text-xs sm:p-1">
-                  Property
-                </th>
-                <th className="bg-slate-100 text-teal-700 font-semibold p-2 text-left md:text-sm md:p-1.5 sm:text-xs sm:p-1">
-                  Value
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(exifData).map(([key, value]) => (
-                <tr key={key} className="hover:bg-slate-50 even:bg-slate-50">
-                  <td className="p-2 border-b border-slate-200 md:text-sm md:p-1.5 sm:text-xs sm:p-1 sm:max-w-[40%] sm:break-words">
-                    {key}
-                  </td>
-                  <td className="p-2 border-b border-slate-200 md:text-sm md:p-1.5 sm:text-xs sm:p-1">
-                    {safeRender(value)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      </div>
+      )}
+
+      {/* Camera Info Section */}
+      {hasCamera && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2 border-b border-gray-200 pb-1">
+            Camera Information
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {exifData.make && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Make</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.make)}</div>
+              </div>
+            )}
+            {exifData.model && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Model</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.model)}</div>
+              </div>
+            )}
+            {exifData.dateTime && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Date</div>
+                <div className="font-medium text-gray-800 group relative">
+                  {safeRender(exifData.dateTime)}
+                  {exifData.rawDateTime && (
+                    <span className="invisible group-hover:visible absolute top-full left-0 mt-1 p-1 bg-gray-800 text-white text-xs rounded z-10 whitespace-nowrap">
+                      {safeRender(exifData.rawDateTime)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {exifData.exposureTime && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Exposure</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.exposureTime)}</div>
+              </div>
+            )}
+            {exifData.fNumber && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Aperture</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.fNumber)}</div>
+              </div>
+            )}
+            {exifData.iso && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">ISO</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.iso)}</div>
+              </div>
+            )}
+            {exifData.focalLength && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Focal Length</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.focalLength)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Location Info Section */}
+      {hasLocation && (
+        <div className="mb-4">
+          <h4 className="text-sm font-medium text-gray-700 mb-2 border-b border-gray-200 pb-1">
+            Location Information
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {exifData.locationName && (
+              <div className="bg-gray-50 p-2 rounded md:col-span-3">
+                <div className="text-xs text-gray-500">Location</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.locationName)}</div>
+              </div>
+            )}
+            {exifData.gpsLatitude && exifData.gpsLongitude && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Coordinates</div>
+                <div className="font-medium text-gray-800">
+                  {safeRender(exifData.gpsLatitude)}, {safeRender(exifData.gpsLongitude)}
+                </div>
+              </div>
+            )}
+            {exifData.gpsAltitude && (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="text-xs text-gray-500">Altitude</div>
+                <div className="font-medium text-gray-800">{safeRender(exifData.gpsAltitude)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Properties when Show All is active */}
+      {showAllExif && otherProperties.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">All Properties</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Property
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {Object.keys(exifData).map((key) => (
+                  <tr key={key}>
+                    <td className="px-3 py-2 whitespace-nowrap font-medium text-gray-900">{key}</td>
+                    <td className="px-3 py-2 whitespace-nowrap text-gray-700">
+                      {safeRender(exifData[key])}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
